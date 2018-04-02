@@ -1,0 +1,119 @@
+---
+title: "MS&E 246 Exploratory Analysis"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r}
+# Remove all variables from Workspace
+rm(list=ls())
+
+# install package manager if not installed
+if (!require("pacman")){
+  install.packages("pacman")
+}
+
+# Load package Manager
+require(pacman)
+
+# Install/load required packages
+p_load(dplyr,gmodels,xtable,knitr,stargazer,zoo)
+```
+
+```{r}
+# Load raw csv file
+df <- read.csv("SBA_Loan_data_.csv")
+
+# Exclude CANCLD and EXEMPT per teaching team instructions
+df <- filter(df, LoanStatus!="CANCLD", LoanStatus!="EXEMPT", LoanStatus!="")
+
+```
+
+```{r}
+# Remove Duplicate Records. There are only 2 of the 54,806 that are duplicated
+# Removing these we have a dataset of size 54,804
+df <- df[!duplicated(df),]
+# Convert Columns to correct formats.
+df$ApprovalDate <- as.Date(df$ApprovalDate,"%m/%d/%y")
+df$ChargeOffDate <- as.Date(df$ChargeOffDate,"%m/%d/%y")
+## EXPLORE AND PREPARE INDEPENDENT VARIABLES ##
+## INDEPENDENT VARIABLE PREPARATION ##
+# BorrState:
+table(df$BorrState)
+df$BorrState <- as.factor(df$BorrState)
+# ProjectState: Equal to BorrState 99.5% of the time. Drop this var.
+sum(df$ProjectState==df$BorrState)/nrow(df)
+# ThirdPartyLender_State: In non-missing cases, 54% of the time 
+# ThirdPartyLender_State is different from BorrState.
+# Planning to fill missing values and keep this variable.
+sum(df[df$ThirdPartyLender_State!="",]$ThirdPartyLender_State==
+  df[df$ThirdPartyLender_State!="",]$BorrState)/
+  nrow(df[df$ThirdPartyLender_State!="",])
+table(df$ThirdPartyLender_State)
+df$ThirdPartyLender_State[df$ThirdPartyLender_State==""] <- "MISSING"
+df$ThirdPartyLender_State[df$ThirdPartyLender_State %in% 
+                            c("AB","Ba","BC","D.","GU","Ro","St","WY","#N","0")] <- "OTHER"
+df$ThirdPartyLender_State <- as.factor(df$ThirdPartyLender_State)
+# DeliveryMethod: Delete "504REFI" loans. Only 1 exists in loss dataset defined
+# later. 31 Exist in full dataset. Removing these we end up with 54,773
+table(df$DeliveryMethod)
+df <- df[df$DeliveryMethod!="504REFI",] 
+df$DeliveryMethod <- as.factor(df$DeliveryMethod)
+# subpgmdesc: Delete "Sec. 504 - Delta loans, funded 9/26/95" loans.
+# Only 1 exists in loss dataset defined later. 34 exist in data set up to this point.
+# Removing these we end up with 54,739 observations
+# I don't end up including this variable because it linearly dependent with 
+# DeliveryMethod. However DeliveryMethod provides slightly more information. 
+table(df$subpgmdesc)
+df <- df[df$subpgmdesc!="Sec. 504 - Delta loans, funded 9/26/95",] 
+df$subpgmdesc <- as.factor(df$subpgmdesc)
+# TermInMonths: There are a bunch of oddball Terms that we set to OTHER.
+# 99% of loans have Terms of 120 or 240 months.
+table(df$TermInMonths)
+df$TermInMonths1 <- ifelse(df$TermInMonths!=120 & df$TermInMonths!=240,"OTHER",df$TermInMonths)
+df$TermInMonths1 <- as.factor(df$TermInMonths1)
+# NaicsCode: 
+df$NaicsCode <- as.character(df$NaicsCode)
+df$naics2 <- substr(df$NaicsCode,1,2)
+df$naics2[is.na(df$NaicsCode)] <- "MISSING"
+df$naics2[df$naics2 %in% 
+          c("22","55","92","99")] <- "OTHER"
+df$naics2 <- as.factor(df$naics2)
+table(df$naics2)
+# BusinessType: 
+table(df$BusinessType)
+df$BusinessType[df$BusinessType==""] <- "MISSING"
+table(df$BusinessType)
+df$BusinessType <- as.factor(df$BusinessType)
+## DEAL WITH MISSING VALES OF ThirdPartyDollars ##
+df$LoanBalRatio <- df$ThirdPartyDollars/df$GrossApproval
+quantile(df$LoanBalRatio,c(0,.1,.2,.3,.4,.5,.6,.7,.8,.9,1), na.rm = TRUE)
+MedianLoanBalRatio <- median(df$LoanBalRatio, na.rm = TRUE)
+# Interpolate missing values for ThirdPartyDollars using GrossApproval. 
+# We will use this method.
+df$ThirdPartyDollars0 <- ifelse(is.na(df$ThirdPartyDollars),
+                                MedianLoanBalRatio*df$GrossApproval,
+                                df$ThirdPartyDollars)
+df$TotalLoan <- df$ThirdPartyDollars0 + df$GrossApproval
+# Interpolate missing values for ThirdPartyDollars using average of
+# ThirdPartyMissing values. For comparison only. Not used in modeling.
+df$ThirdPartyDollars1 <- na.aggregate(df$ThirdPartyDollars)
+# Create an indicator for when ThirdPartyDollars was missing so we can assess
+# whether our interplated values are better or worse in prediction.
+df$missingThirdPartyDollars <- ifelse(is.na(df$ThirdPartyDollars),1,0)
+## DEFINE DIFFERENT VERSIONS OF LGD ##
+df$lgd0 <- df$GrossChargeOffAmount/(df$ThirdPartyDollars0+df$GrossApproval)
+df$lgd1 <- df$GrossChargeOffAmount/(df$ThirdPartyDollars1+df$GrossApproval)
+# Cap LGD at 1. This is the version we will use.
+df$lgd <- pmin(df$lgd0,1)
+
+```
+
+
+
+

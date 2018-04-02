@@ -1,0 +1,512 @@
+np.pl.95.5 <- ggplot() + geom_density(mapping=aes(x=bootstrap_var$np.loss.var95.5)) + xlab("VaR") + ylab("Density") + ggtitle("Non-parametric 5-year VaR (95%)")
+np.pl.95.5
+ggsave("../Figures/np_var_595.png", np.pl.95.5)
+np.pl.99.5 <- ggplot() + geom_density(mapping=aes(x=bootstrap_var$np.loss.var99.5)) + xlab("VaR") + ylab("Density") + ggtitle("Non-parametric 5-year VaR (99%)")
+np.pl.99.5
+ggsave("../Figures/np_var_599.png", np.pl.99.5)
+# AVaR & Confidence intervals 1 year
+np.avar.95.1 <- mean(bootstrap_var$np.loss.var95.1)
+np.var.95.1.sd <- sd(bootstrap_var$np.loss.var95.1)
+np.var.95.1.ci <- c(np.avar.95.1-1.96*np.var.95.1.sd, np.avar.95.1+1.96*np.var.95.1.sd)
+np.avar.99.1 <- mean(bootstrap_var$np.loss.var99.1)
+np.var.99.1.sd <- sd(bootstrap_var$np.loss.var99.1)
+np.var.99.1.ci <- c(np.avar.99.1-2.57*np.var.99.1.sd, np.avar.99.1+2.57*np.var.99.1.sd)
+# AVaR & Confidence intervals 5 year
+np.avar.95.5 <- mean(bootstrap_var$np.loss.var95.5)
+np.var.95.5.sd <- sd(bootstrap_var$np.loss.var95.5)
+np.var.95.5.ci <- c(np.avar.95.5-1.96*np.var.95.5.sd, np.avar.95.5+1.96*np.var.95.5.sd)
+np.avar.99.5 <- mean(bootstrap_var$np.loss.var99.5)
+np.var.99.5.sd <- sd(bootstrap_var$np.loss.var99.5)
+np.var.99.5.ci <- c(np.avar.99.5-2.57*np.var.99.5.sd, np.avar.99.5+2.57*np.var.99.5.sd)
+# Tranches
+portfolio_loss_tranche<-portfolio_loss
+portfolio_loss_tranche$Residual_loss_1<-0
+portfolio_loss_tranche$Junior_tranche_loss_1<-0
+portfolio_loss_tranche$Senior_tranche_loss_1<-0
+portfolio_loss_tranche$Residual_loss_5<-0
+portfolio_loss_tranche$Junior_tranche_loss_5<-0
+portfolio_loss_tranche$Senior_tranche_loss_5<-0
+for(i in 1:nrow(portfolio_loss_tranche)){
+if(portfolio_loss_tranche$portfolio_percent_loss_1[i]<5){
+portfolio_loss_tranche$Residual_loss_1[i]<-portfolio_loss_tranche$portfolio_percent_loss_1[i]
+}else if(portfolio_loss_tranche$portfolio_percent_loss_1[i]<15){
+portfolio_loss_tranche$Residual_loss_1[i]<-5
+portfolio_loss_tranche$Junior_tranche_loss_1[i]<-portfolio_loss_tranche$portfolio_percent_loss_1[i]-5
+}else if(portfolio_loss_tranche$portfolio_percent_loss_1[i]>=15){
+portfolio_loss_tranche$Residual_loss_1[i]<-5
+portfolio_loss_tranche$Junior_tranche_loss_1[i]<-10
+portfolio_loss_tranche$Senior_tranche_loss_1[i]<-portfolio_loss_tranche$portfolio_percent_loss_1[i]-15
+}
+if(portfolio_loss_tranche$portfolio_percent_loss_5[i]<5){
+portfolio_loss_tranche$Residual_loss_5[i]<-portfolio_loss_tranche$portfolio_percent_loss_5[i]
+}else if(portfolio_loss_tranche$portfolio_percent_loss_5[i]<15){
+portfolio_loss_tranche$Residual_loss_5[i]<-5
+portfolio_loss_tranche$Junior_tranche_loss_5[i]<-portfolio_loss_tranche$portfolio_percent_loss_5[i]-5
+}else if(portfolio_loss_tranche$portfolio_percent_loss_5[i]>=15){
+portfolio_loss_tranche$Residual_loss_5[i]<-5
+portfolio_loss_tranche$Junior_tranche_loss_5[i]<-10
+portfolio_loss_tranche$Senior_tranche_loss_5[i]<-portfolio_loss_tranche$portfolio_percent_loss_5[i]-15
+}
+}
+portfolio_loss_tranche_1<-unique(portfolio_loss_tranche[c("r_prob", "Residual_loss_1", "Junior_tranche_loss_1", "Senior_tranche_loss_1")])
+portfolio_loss_tranche_5<-unique(portfolio_loss_tranche[c("r_prob", "Residual_loss_5","Junior_tranche_loss_5","Senior_tranche_loss_5")])
+distribution_1 <-ggplot(portfolio_loss_tranche_1, aes(r_prob)) + geom_line(aes(y = (100-Residual_loss_1)/100, colour = "Residual Loss")) + geom_line(aes(y = (100-Junior_tranche_loss_1)/100, colour = "Junior Tranche")) + geom_line(aes(y = (100-Senior_tranche_loss_1)/100, colour = "Senior Tranche")) + xlab("Tranche Loss (%)") + ylab("Cummulative Loss Distribution")+ ylim(0, 1)
+distribution_5 <-ggplot(portfolio_loss_tranche_5, aes(r_prob)) + geom_line(aes(y = (100-Residual_loss_5)/100, colour = "Residual Loss")) + geom_line(aes(y = (100-Junior_tranche_loss_5)/100, colour = "Junior Tranche")) + geom_line(aes(y = (100-Senior_tranche_loss_5)/100, colour = "Senior Tranche")) + xlab("Tranche Loss (%)") + ylab("Cummulative Loss Distribution")+ ylim(0, 1)
+distribution_1
+distribution_5
+ggsave("../Figures/distribution_1.png", distribution_1)
+ggsave("../Figures/distribution_5.png", distribution_5)
+View(portfolio_loss_tranche_5)
+names(portfolio_loss_tranche_1)
+portfolio_loss_tranche_1<-unique(portfolio_loss_tranche[c("r_prob", "Residual_loss_1", "Junior_tranche_loss_1", "Senior_tranche_loss_1")])
+portfolio_loss_tranche_5<-unique(portfolio_loss_tranche[c("r_prob", "Residual_loss_5","Junior_tranche_loss_5","Senior_tranche_loss_5")])
+portfolio_loss_tranche_1<-rbind(portfolio_loss_tranche_1,data.frame(r_prob=0,Residual_loss_1=0,Junior_tranche_loss_1=0,Senior_tranche_loss_1=0))
+portfolio_loss_tranche_5<-rbind(portfolio_loss_tranche_5,data.frame(r_prob=0,Residual_loss_5=0,Junior_tranche_loss_5=0,Senior_tranche_loss_5=0))
+distribution_1 <-ggplot(portfolio_loss_tranche_1, aes(r_prob)) + geom_line(aes(y = (100-Residual_loss_1)/100, colour = "Residual Loss")) + geom_line(aes(y = (100-Junior_tranche_loss_1)/100, colour = "Junior Tranche")) + geom_line(aes(y = (100-Senior_tranche_loss_1)/100, colour = "Senior Tranche")) + xlab("Tranche Loss (%)") + ylab("Cummulative Loss Distribution")+ ylim(0, 1)
+distribution_5 <-ggplot(portfolio_loss_tranche_5, aes(r_prob)) + geom_line(aes(y = (100-Residual_loss_5)/100, colour = "Residual Loss")) + geom_line(aes(y = (100-Junior_tranche_loss_5)/100, colour = "Junior Tranche")) + geom_line(aes(y = (100-Senior_tranche_loss_5)/100, colour = "Senior Tranche")) + xlab("Tranche Loss (%)") + ylab("Cummulative Loss Distribution")+ ylim(0, 1)
+distribution_1
+distribution_5
+ggsave("../Figures/distribution_1.png", distribution_1)
+ggsave("../Figures/distribution_5.png", distribution_5)
+View(portfolio_loss_tranche_1)
+portfolio_loss_tranche_1<-unique(portfolio_loss_tranche[c("r_prob", "Residual_loss_1", "Junior_tranche_loss_1", "Senior_tranche_loss_1")])
+portfolio_loss_tranche_5<-unique(portfolio_loss_tranche[c("r_prob", "Residual_loss_5","Junior_tranche_loss_5","Senior_tranche_loss_5")])
+portfolio_loss_tranche_1<-rbind(portfolio_loss_tranche_1,data.frame(r_prob=0,Residual_loss_1=5,Junior_tranche_loss_1=10,Senior_tranche_loss_1=85))
+portfolio_loss_tranche_5<-rbind(portfolio_loss_tranche_5,data.frame(r_prob=0,Residual_loss_5=5,Junior_tranche_loss_5=10,Senior_tranche_loss_5=85))
+distribution_1 <-ggplot(portfolio_loss_tranche_1, aes(r_prob)) + geom_line(aes(y = (100-Residual_loss_1)/100, colour = "Residual Loss")) + geom_line(aes(y = (100-Junior_tranche_loss_1)/100, colour = "Junior Tranche")) + geom_line(aes(y = (100-Senior_tranche_loss_1)/100, colour = "Senior Tranche")) + xlab("Tranche Loss (%)") + ylab("Cummulative Loss Distribution")+ ylim(0, 1)
+distribution_5 <-ggplot(portfolio_loss_tranche_5, aes(r_prob)) + geom_line(aes(y = (100-Residual_loss_5)/100, colour = "Residual Loss")) + geom_line(aes(y = (100-Junior_tranche_loss_5)/100, colour = "Junior Tranche")) + geom_line(aes(y = (100-Senior_tranche_loss_5)/100, colour = "Senior Tranche")) + xlab("Tranche Loss (%)") + ylab("Cummulative Loss Distribution")+ ylim(0, 1)
+distribution_1
+distribution_5
+ggsave("../Figures/distribution_1.png", distribution_1)
+ggsave("../Figures/distribution_5.png", distribution_5)
+portfolio_loss_tranche_1<-unique(portfolio_loss_tranche[c("r_prob", "Residual_loss_1", "Junior_tranche_loss_1", "Senior_tranche_loss_1")])
+portfolio_loss_tranche_5<-unique(portfolio_loss_tranche[c("r_prob", "Residual_loss_5","Junior_tranche_loss_5","Senior_tranche_loss_5")])
+portfolio_loss_tranche_1<-rbind(portfolio_loss_tranche_1,data.frame(r_prob=0,Residual_loss_1=5,Junior_tranche_loss_1=10,Senior_tranche_loss_1=85))
+portfolio_loss_tranche_5<-rbind(portfolio_loss_tranche_5,data.frame(r_prob=0,Residual_loss_5=5,Junior_tranche_loss_5=10,Senior_tranche_loss_5=85))
+distribution_1 <-ggplot(portfolio_loss_tranche_1, aes(r_prob)) + geom_line(aes(y = (100-Residual_loss_1)/100, colour = "Residual Loss")) + geom_line(aes(y = (100-Junior_tranche_loss_1)/100, colour = "Junior Tranche")) + geom_line(aes(y = (100-Senior_tranche_loss_1)/100, colour = "Senior Tranche")) + xlab("Tranche Loss (%)") + ylab("Cummulative Loss Distribution")+ ylim(0, 1)
+distribution_5 <-ggplot(portfolio_loss_tranche_5, aes(r_prob)) + geom_line(aes(y = (100-Residual_loss_5)/100, colour = "Residual Loss")) + geom_line(aes(y = (100-Junior_tranche_loss_5)/100, colour = "Junior Tranche")) + geom_line(aes(y = (100-Senior_tranche_loss_5)/100, colour = "Senior Tranche")) + xlab("Tranche Loss (%)") + ylab("Cummulative Loss Distribution")+ ylim(0, 1)
+distribution_1
+distribution_5
+ggsave("../Figures/distribution_1.png", distribution_1)
+ggsave("../Figures/distribution_5.png", distribution_5)
+np.var.95.1.ci <- paste(np.avar.95.1-1.96*np.var.95.1.sd, np.avar.95.1+1.96*np.var.95.1.sd,sep=",")
+np.var.95.1.ci <- paste("[",round(np.avar.95.1-1.96*np.var.95.1.sd,2), round(np.avar.95.1+1.96*np.var.95.1.sd,2),"]",sep=",")
+np.var.95.1.ci <- paste(paste("[",round(np.avar.95.1-1.96*np.var.95.1.sd,2),sep=""), paste(round(np.avar.95.1+1.96*np.var.95.1.sd,2),"]",sep=""),sep=",")
+np.var.99.1.ci <- paste(paste("[",round(np.avar.99.1-1.96*np.var.99.1.sd,2),sep=""), paste(round(np.avar.99.1+1.96*np.var.99.1.sd,2),"]",sep=""),sep=",")
+np.var.99.5.ci <- paste(paste("[",round(np.avar.99.5-1.96*np.var.99.5.sd,2),sep=""), paste(round(np.avar.99.5+1.96*np.var.99.5.sd,2),"]",sep=""),sep=",")
+np.var.95.5.ci <- paste(paste("[",round(np.avar.95.5-1.96*np.var.95.5.sd,2),sep=""), paste(round(np.avar.95.5+1.96*np.var.95.5.sd,2),"]",sep=""),sep=",")
+# Remove all variables from Workspace
+rm(list=ls())
+set.seed(1234)
+loss_sim<-10000
+Var_sim<-10000
+# install package manager if not installed
+if (!require("pacman")){
+install.packages("pacman")
+}
+# Load package Manager
+require(pacman)
+# Install/load required packages
+p_load(ggplot2)
+setwd("Google Drive/Current Quarter/MS&E 246/Project/code/")
+#data1 <- read.csv('sbadatawithprobabilities.csv')
+data <- read.csv("../raw_data_files/SBA_PD_LGD.csv")
+data$estimated_chargoff_amount<-data$lgd_final*data$TotalLoan
+###############  Create Portfolio  ###############
+set.seed(1)
+portfolio<-data[sample(1:nrow(data), 500, replace=FALSE),]
+portfolio<-portfolio[c("lgd_final","TotalLoan","estimated_chargoff_amount","default_probabilities_1_year","default_probabilities_5_years")]
+portfolio_loss<-data.frame(r_prob=runif(loss_sim, min = 0, max = 1), portfolio_dollar_loss_1=0, portfolio_dollar_loss_5=0)
+###############  Simulate Losses  ###############
+#Monte Carlo Simulation
+set.seed(1)
+for (i in 1:nrow(portfolio_loss)) {
+cur_portfolio<-portfolio
+cur_portfolio$r_prob<-portfolio_loss$r_prob[i]
+cur_portfolio$sim_default_1<-cur_portfolio$default_probabilities_1_year>=portfolio_loss$r_prob[i]
+cur_portfolio$sim_default_5<-cur_portfolio$default_probabilities_5_years>=portfolio_loss$r_prob[i]
+cur_portfolio$sim_loss_1<-cur_portfolio$estimated_chargoff_amount*cur_portfolio$sim_default_1
+cur_portfolio$sim_loss_5<-cur_portfolio$estimated_chargoff_amount*cur_portfolio$sim_default_5
+portfolio_loss$portfolio_dollar_loss_1[i]<-sum(cur_portfolio$sim_loss_1)
+portfolio_loss$portfolio_dollar_loss_5[i]<-sum(cur_portfolio$sim_loss_5)
+}
+portfolio_loss$portfolio_percent_loss_1<-portfolio_loss$portfolio_dollar_loss_1/sum(portfolio$TotalLoan)*100
+portfolio_loss$portfolio_percent_loss_5<-portfolio_loss$portfolio_dollar_loss_5/sum(portfolio$TotalLoan)*100
+# Plot losses
+portfolio_dollar_loss_plot_data<-rbind(data.frame(dollar_loss=portfolio_loss$portfolio_dollar_loss_1, years="1"),data.frame(dollar_loss=portfolio_loss$portfolio_dollar_loss_5, years="5"))
+portfolio_percent_loss_plot_data<-rbind(data.frame(percent_loss=portfolio_loss$portfolio_percent_loss_1, years="1"),data.frame(percent_loss=portfolio_loss$portfolio_percent_loss_5, years="5"))
+portfolio_dollar_loss_plot<-ggplot(portfolio_dollar_loss_plot_data, aes(x = dollar_loss, fill = years)) + geom_density(alpha = 0.5) + xlab("Portfolio $ Loss") + ylab("Probability")
+portfolio_percent_loss_plot<-ggplot(portfolio_percent_loss_plot_data, aes(x = percent_loss, fill = years)) + geom_density(alpha = 0.5) + xlab("Portfolio % Loss") + ylab("Probability")
+portfolio_dollar_loss_plot
+portfolio_percent_loss_plot
+ggsave("../Figures/portfolio_dollar_loss_plot.png", portfolio_dollar_loss_plot)
+ggsave("../Figures/portfolio_percent_loss_plot.png", portfolio_percent_loss_plot)
+###############  Calculate Non-Parametric/Historic VAR  ###############
+bootstrap_var<-data.frame(bootstrap=1:Var_sim,np.loss.var95.1=0,np.loss.var99.1=0,np.loss.var95.5=0,np.loss.var99.5=0)
+# Bootstrapping simulated values
+for (i in 1:Var_sim) {
+boot.loss.1 <- sample(portfolio_loss$portfolio_percent_loss_1, length(portfolio_loss$portfolio_percent_loss_1), replace=TRUE)
+boot.loss.5 <- sample(portfolio_loss$portfolio_percent_loss_5, length(portfolio_loss$portfolio_percent_loss_5), replace=TRUE)
+# Calculating VaR
+bootstrap_var$np.loss.var95.1[i] <- quantile(boot.loss.1, probs=seq(0.95), na.rm=TRUE)
+bootstrap_var$np.loss.var99.1[i] <- quantile(boot.loss.1, probs=seq(0.99), na.rm=TRUE)
+bootstrap_var$np.loss.var95.5[i] <- quantile(boot.loss.5, probs=seq(0.95), na.rm=TRUE)
+bootstrap_var$np.loss.var99.5[i] <- quantile(boot.loss.5, probs=seq(0.99), na.rm=TRUE)
+}
+# Plot VaR Values
+np.pl.95.1 <- ggplot() + geom_density(mapping=aes(x=bootstrap_var$np.loss.var95.1)) + xlab("VaR") + ylab("Density") + ggtitle("Non-parametric 1-year VaR (95%)")
+np.pl.95.1
+ggsave("../Figures/np_var_195.png", np.pl.95.1)
+np.pl.99.1 <- ggplot() + geom_density(mapping=aes(x=bootstrap_var$np.loss.var99.1)) + xlab("VaR") + ylab("Density") + ggtitle("Non-parametric 1-year VaR (99%)")
+np.pl.99.1
+ggsave("../Figures/np_var_199.png", np.pl.99.1)
+# Plot VaR Values
+np.pl.95.5 <- ggplot() + geom_density(mapping=aes(x=bootstrap_var$np.loss.var95.5)) + xlab("VaR") + ylab("Density") + ggtitle("Non-parametric 5-year VaR (95%)")
+np.pl.95.5
+ggsave("../Figures/np_var_595.png", np.pl.95.5)
+np.pl.99.5 <- ggplot() + geom_density(mapping=aes(x=bootstrap_var$np.loss.var99.5)) + xlab("VaR") + ylab("Density") + ggtitle("Non-parametric 5-year VaR (99%)")
+np.pl.99.5
+ggsave("../Figures/np_var_599.png", np.pl.99.5)
+Var_Metrics<-data.frame(Metrics=c("Mean","Standard Deviation","CI"))
+# AVaR & Confidence intervals 1 year
+np.avar.95.1 <- mean(bootstrap_var$np.loss.var95.1)
+np.var.95.1.sd <- sd(bootstrap_var$np.loss.var95.1)
+np.var.95.1.ci <- paste(paste("[",round(np.avar.95.1-1.96*np.var.95.1.sd,2),sep=""), paste(round(np.avar.95.1+1.96*np.var.95.1.sd,2),"]",sep=""),sep=",")
+np.avar.99.1 <- mean(bootstrap_var$np.loss.var99.1)
+np.var.99.1.sd <- sd(bootstrap_var$np.loss.var99.1)
+np.var.99.1.ci <- c("[",np.avar.99.1-2.57*np.var.99.1.sd, np.avar.99.1+2.57*np.var.99.1.sd)
+np.var.99.1.ci <- paste(paste("[",round(np.avar.99.1-1.96*np.var.99.1.sd,2),sep=""), paste(round(np.avar.99.1+1.96*np.var.99.1.sd,2),"]",sep=""),sep=",")
+# AVaR & Confidence intervals 5 year
+np.avar.95.5 <- mean(bootstrap_var$np.loss.var95.5)
+np.var.95.5.sd <- sd(bootstrap_var$np.loss.var95.5)
+np.var.95.5.ci <- c(np.avar.95.5-1.96*np.var.95.5.sd, np.avar.95.5+1.96*np.var.95.5.sd)
+np.var.95.5.ci <- paste(paste("[",round(np.avar.95.5-1.96*np.var.95.5.sd,2),sep=""), paste(round(np.avar.95.5+1.96*np.var.95.5.sd,2),"]",sep=""),sep=",")
+np.avar.99.5 <- mean(bootstrap_var$np.loss.var99.5)
+np.var.99.5.sd <- sd(bootstrap_var$np.loss.var99.5)
+np.var.99.5.ci <- c(np.avar.99.5-2.57*np.var.99.5.sd, np.avar.99.5+2.57*np.var.99.5.sd)
+np.var.99.5.ci <- paste(paste("[",round(np.avar.99.5-1.96*np.var.99.5.sd,2),sep=""), paste(round(np.avar.99.5+1.96*np.var.99.5.sd,2),"]",sep=""),sep=",")
+# Tranches
+portfolio_loss_tranche<-portfolio_loss
+portfolio_loss_tranche$Residual_loss_1<-0
+portfolio_loss_tranche$Junior_tranche_loss_1<-0
+portfolio_loss_tranche$Senior_tranche_loss_1<-0
+portfolio_loss_tranche$Residual_loss_5<-0
+portfolio_loss_tranche$Junior_tranche_loss_5<-0
+portfolio_loss_tranche$Senior_tranche_loss_5<-0
+for(i in 1:nrow(portfolio_loss_tranche)){
+if(portfolio_loss_tranche$portfolio_percent_loss_1[i]<5){
+portfolio_loss_tranche$Residual_loss_1[i]<-portfolio_loss_tranche$portfolio_percent_loss_1[i]
+}else if(portfolio_loss_tranche$portfolio_percent_loss_1[i]<15){
+portfolio_loss_tranche$Residual_loss_1[i]<-5
+portfolio_loss_tranche$Junior_tranche_loss_1[i]<-portfolio_loss_tranche$portfolio_percent_loss_1[i]-5
+}else if(portfolio_loss_tranche$portfolio_percent_loss_1[i]>=15){
+portfolio_loss_tranche$Residual_loss_1[i]<-5
+portfolio_loss_tranche$Junior_tranche_loss_1[i]<-10
+portfolio_loss_tranche$Senior_tranche_loss_1[i]<-portfolio_loss_tranche$portfolio_percent_loss_1[i]-15
+}
+if(portfolio_loss_tranche$portfolio_percent_loss_5[i]<5){
+portfolio_loss_tranche$Residual_loss_5[i]<-portfolio_loss_tranche$portfolio_percent_loss_5[i]
+}else if(portfolio_loss_tranche$portfolio_percent_loss_5[i]<15){
+portfolio_loss_tranche$Residual_loss_5[i]<-5
+portfolio_loss_tranche$Junior_tranche_loss_5[i]<-portfolio_loss_tranche$portfolio_percent_loss_5[i]-5
+}else if(portfolio_loss_tranche$portfolio_percent_loss_5[i]>=15){
+portfolio_loss_tranche$Residual_loss_5[i]<-5
+portfolio_loss_tranche$Junior_tranche_loss_5[i]<-10
+portfolio_loss_tranche$Senior_tranche_loss_5[i]<-portfolio_loss_tranche$portfolio_percent_loss_5[i]-15
+}
+}
+portfolio_loss_tranche_1<-unique(portfolio_loss_tranche[c("r_prob", "Residual_loss_1", "Junior_tranche_loss_1", "Senior_tranche_loss_1")])
+portfolio_loss_tranche_5<-unique(portfolio_loss_tranche[c("r_prob", "Residual_loss_5","Junior_tranche_loss_5","Senior_tranche_loss_5")])
+portfolio_loss_tranche_1<-rbind(portfolio_loss_tranche_1,data.frame(r_prob=0,Residual_loss_1=5,Junior_tranche_loss_1=10,Senior_tranche_loss_1=85))
+portfolio_loss_tranche_5<-rbind(portfolio_loss_tranche_5,data.frame(r_prob=0,Residual_loss_5=5,Junior_tranche_loss_5=10,Senior_tranche_loss_5=85))
+distribution_1 <-ggplot(portfolio_loss_tranche_1, aes(r_prob)) + geom_line(aes(y = (100-Residual_loss_1)/100, colour = "Residual Loss")) + geom_line(aes(y = (100-Junior_tranche_loss_1)/100, colour = "Junior Tranche")) + geom_line(aes(y = (100-Senior_tranche_loss_1)/100, colour = "Senior Tranche")) + xlab("Tranche Loss (%)") + ylab("Cummulative Loss Distribution")+ ylim(0, 1)
+distribution_5 <-ggplot(portfolio_loss_tranche_5, aes(r_prob)) + geom_line(aes(y = (100-Residual_loss_5)/100, colour = "Residual Loss")) + geom_line(aes(y = (100-Junior_tranche_loss_5)/100, colour = "Junior Tranche")) + geom_line(aes(y = (100-Senior_tranche_loss_5)/100, colour = "Senior Tranche")) + xlab("Tranche Loss (%)") + ylab("Cummulative Loss Distribution")+ ylim(0, 1)
+distribution_1
+distribution_5
+ggsave("../Figures/distribution_1.png", distribution_1)
+ggsave("../Figures/distribution_5.png", distribution_5)
+# AVaR & Confidence intervals 1 year
+np.avar.95.1 <- mean(bootstrap_var$np.loss.var95.1)
+np.var.95.1.sd <- sd(bootstrap_var$np.loss.var95.1)
+np.var.95.1.ci <- paste(paste("[",round(np.avar.95.1-1.96*np.var.95.1.sd,2),sep=""), paste(round(np.avar.95.1+1.96*np.var.95.1.sd,2),"]",sep=""),sep=",")
+np.avar.99.1 <- mean(bootstrap_var$np.loss.var99.1)
+np.var.99.1.sd <- sd(bootstrap_var$np.loss.var99.1)
+np.var.99.1.ci <- paste(paste("[",round(np.avar.99.1-1.96*np.var.99.1.sd,2),sep=""), paste(round(np.avar.99.1+1.96*np.var.99.1.sd,2),"]",sep=""),sep=",")
+# AVaR & Confidence intervals 5 year
+np.avar.95.5 <- mean(bootstrap_var$np.loss.var95.5)
+np.var.95.5.sd <- sd(bootstrap_var$np.loss.var95.5)
+np.var.95.5.ci <- paste(paste("[",round(np.avar.95.5-1.96*np.var.95.5.sd,2),sep=""), paste(round(np.avar.95.5+1.96*np.var.95.5.sd,2),"]",sep=""),sep=",")
+np.avar.99.5 <- mean(bootstrap_var$np.loss.var99.5)
+np.var.99.5.sd <- sd(bootstrap_var$np.loss.var99.5)
+np.var.99.5.ci <- paste(paste("[",round(np.avar.99.5-1.96*np.var.99.5.sd,2),sep=""), paste(round(np.avar.99.5+1.96*np.var.99.5.sd,2),"]",sep=""),sep=",")
+# AVaR & Confidence intervals 1 year
+np.avar.95.1 <- paste(mean(bootstrap_var$np.loss.var95.1))
+# AVaR & Confidence intervals 1 year
+np.avar.95.1 <- paste(round(mean(bootstrap_var$np.loss.var95.1,2)))
+# AVaR & Confidence intervals 1 year
+np.avar.95.1 <- paste(round(mean(bootstrap_var$np.loss.var95.1,4)))
+# AVaR & Confidence intervals 1 year
+np.avar.95.1 <- paste(round(mean(bootstrap_var$np.loss.var95.1),4))
+# AVaR & Confidence intervals 1 year
+np.avar.95.1 <- paste(round(mean(bootstrap_var$np.loss.var95.1),2))
+np.var.95.1.sd <- paste(round(sd(bootstrap_var$np.loss.var95.1),2))
+np.var.95.1.sd <- paste(round(sd(bootstrap_var$np.loss.var95.1),6))
+np.var.95.1.sd <- paste(round(sd(bootstrap_var$np.loss.var95.1),10))
+np.var.95.1.sd <- paste(round(sd(bootstrap_var$np.loss.var95.1)))
+np.var.95.1.sd <- round(sd(bootstrap_var$np.loss.var95.1))
+np.var.95.1.sd <- round(sd(bootstrap_var$np.loss.var95.1),10)
+np.var.95.1.sd <- signif(sd(bootstrap_var$np.loss.var95.1),10)
+# AVaR & Confidence intervals 1 year
+np.avar.95.1 <- paste(round(mean(bootstrap_var$np.loss.var95.1),2))
+np.var.95.1.sd <- paste(round(sd(bootstrap_var$np.loss.var95.1),2))
+np.var.95.1.ci <- paste(paste("[",round(np.avar.95.1-1.96*np.var.95.1.sd,2),sep=""), paste(round(np.avar.95.1+1.96*np.var.95.1.sd,2),"]",sep=""),sep=",")
+np.avar.99.1 <- paste(round(mean(bootstrap_var$np.loss.var99.1),2))
+np.var.99.1.sd <- paste(round(sd(bootstrap_var$np.loss.var99.1),2))
+np.var.99.1.ci <- paste(paste("[",round(np.avar.99.1-1.96*np.var.99.1.sd,2),sep=""), paste(round(np.avar.99.1+1.96*np.var.99.1.sd,2),"]",sep=""),sep=",")
+# AVaR & Confidence intervals 5 year
+np.avar.95.5 <- paste(round(mean(bootstrap_var$np.loss.var95.5),2))
+np.var.95.5.sd <- paste(round(sd(bootstrap_var$np.loss.var95.5),2))
+np.var.95.5.ci <- paste(paste("[",round(np.avar.95.5-1.96*np.var.95.5.sd,2),sep=""), paste(round(np.avar.95.5+1.96*np.var.95.5.sd,2),"]",sep=""),sep=",")
+np.avar.99.5 <- paste(round(mean(bootstrap_var$np.loss.var99.5),2))
+np.var.99.5.sd <- paste(round(sd(bootstrap_var$np.loss.var99.5),2))
+np.var.99.5.ci <- paste(paste("[",round(np.avar.99.5-1.96*np.var.99.5.sd,2),sep=""), paste(round(np.avar.99.5+1.96*np.var.99.5.sd,2),"]",sep=""),sep=",")
+Var_Metrics<-data.frame(Metrics=c("Mean","Standard Deviation","CI"),Year_1="",Year_5="")
+View(Var_Metrics)
+Var_Metrics<-data.frame(Metrics=c("Mean (95%)","Standard Deviation (95%)","CI (95%)","Mean (99%)","Standard Deviation (99%)","CI (99%)"),Year_1="",Year_5="")
+View(Var_Metrics)
+# AVaR & Confidence intervals 1 year
+Var_Metrics[2,2] <- paste(round(mean(bootstrap_var$np.loss.var95.1),2))
+Var_Metrics<-data.frame(Metrics=c("Mean (95%)","Standard Deviation (95%)","CI (95%)","Mean (99%)","Standard Deviation (99%)","CI (99%)"),Year_1="",Year_5="",stringsAsFactors = F)
+# AVaR & Confidence intervals 1 year
+Var_Metrics[2,2] <- paste(round(mean(bootstrap_var$np.loss.var95.1),2))
+View(Var_Metrics)
+# AVaR & Confidence intervals 1 year
+Var_Metrics[1,2] <- paste(round(mean(bootstrap_var$np.loss.var95.1),2))
+View(Var_Metrics)
+# AVaR & Confidence intervals 1 year
+Var_Metrics[1,2] <- paste(round(mean(bootstrap_var$np.loss.var95.1),2))
+Var_Metrics[2,2] <- paste(round(sd(bootstrap_var$np.loss.var95.1),2))
+Var_Metrics[3,2] <- paste(paste("[",round(np.avar.95.1-1.96*np.var.95.1.sd,2),sep=""), paste(round(np.avar.95.1+1.96*np.var.95.1.sd,2),"]",sep=""),sep=",")
+View(Var_Metrics)
+# AVaR & Confidence intervals 1 year
+Var_Metrics[2,2] <- paste(round(mean(bootstrap_var$np.loss.var95.1),2))
+Var_Metrics[3,2] <- paste(round(sd(bootstrap_var$np.loss.var95.1),2))
+Var_Metrics[4,2] <- paste(paste("[",round(np.avar.95.1-1.96*np.var.95.1.sd,2),sep=""), paste(round(np.avar.95.1+1.96*np.var.95.1.sd,2),"]",sep=""),sep=",")
+# AVaR & Confidence intervals 1 year
+np.avar.95.1 <- paste(round(mean(bootstrap_var$np.loss.var95.1),2))
+np.var.95.1.sd <- paste(round(sd(bootstrap_var$np.loss.var95.1),2))
+np.var.95.1.ci <- paste(paste("[",round(np.avar.95.1-1.96*np.var.95.1.sd,2),sep=""), paste(round(np.avar.95.1+1.96*np.var.95.1.sd,2),"]",sep=""),sep=",")
+Var_Metrics[1,2]<-np.avar.95.1
+Var_Metrics[2,2]<-np.var.95.1.sd
+Var_Metrics[3,2]<-np.var.95.1.sd
+# AVaR & Confidence intervals 1 year
+np.avar.95.1 <- paste(round(mean(bootstrap_var$np.loss.var95.1),2))
+np.var.95.1.sd <- paste(round(sd(bootstrap_var$np.loss.var95.1),2))
+np.var.95.1.ci <- paste(paste("[",round(np.avar.95.1-1.96*np.var.95.1.sd,2),sep=""), paste(round(np.avar.95.1+1.96*np.var.95.1.sd,2),"]",sep=""),sep=",")
+np.avar.99.1 <- paste(round(mean(bootstrap_var$np.loss.var99.1),2))
+np.var.99.1.sd <- paste(round(sd(bootstrap_var$np.loss.var99.1),2))
+np.var.99.1.ci <- paste(paste("[",round(np.avar.99.1-1.96*np.var.99.1.sd,2),sep=""), paste(round(np.avar.99.1+1.96*np.var.99.1.sd,2),"]",sep=""),sep=",")
+# AVaR & Confidence intervals 5 year
+np.avar.95.5 <- paste(round(mean(bootstrap_var$np.loss.var95.5),2))
+np.var.95.5.sd <- paste(round(sd(bootstrap_var$np.loss.var95.5),2))
+np.var.95.5.ci <- paste(paste("[",round(np.avar.95.5-1.96*np.var.95.5.sd,2),sep=""), paste(round(np.avar.95.5+1.96*np.var.95.5.sd,2),"]",sep=""),sep=",")
+np.avar.99.5 <- paste(round(mean(bootstrap_var$np.loss.var99.5),2))
+np.var.99.5.sd <- paste(round(sd(bootstrap_var$np.loss.var99.5),2))
+np.var.99.5.ci <- paste(paste("[",round(np.avar.99.5-1.96*np.var.99.5.sd,2),sep=""), paste(round(np.avar.99.5+1.96*np.var.99.5.sd,2),"]",sep=""),sep=",")
+Var_Metrics[1,2]<-np.avar.95.1
+Var_Metrics[2,2]<-np.var.95.1.sd
+Var_Metrics[3,2]<-np.var.95.1.sd
+View(Var_Metrics)
+np.var.99.1.ci <- paste(paste("[",round(np.avar.99.1-1.96*np.var.99.1.sd,2),sep=""), paste(round(np.avar.99.1+1.96*np.var.99.1.sd,2),"]",sep=""),sep=",")
+np.var.95.1.ci <- paste(paste("[",round(np.avar.95.1-1.96*np.var.95.1.sd,2),sep=""), paste(round(np.avar.95.1+1.96*np.var.95.1.sd,2),"]",sep=""),sep=",")
+np.var.99.1.ci <- paste(round(np.avar.99.1-1.96*np.var.99.1.sd,2), round(np.avar.99.1+1.96*np.var.99.1.sd,2),sep=",")
+np.var.99.1.ci <- as.character(np.avar.99.1-2.57*np.var.99.1.sd) # round(np.avar.99.1+2.57*np.var.99.1.sd,2),sep=",")
+# AVaR & Confidence intervals 1 year
+np.avar.95.1 <- bootstrap_var$np.loss.var95.1
+np.var.95.1.sd <- bootstrap_var$np.loss.var95.1
+np.var.95.1.ci <- as.character(c(np.avar.95.1-1.96*np.var.95.1.sd),c(np.avar.95.1+1.96*np.var.95.1.sd))
+np.var.95.1.ci <- c(np.avar.95.1-1.96*np.var.95.1.sd),c(np.avar.95.1+1.96*np.var.95.1.sd)
+np.var.95.1.ci <- c(np.avar.95.1-1.96*np.var.95.1.sd,np.avar.95.1+1.96*np.var.95.1.sd)
+np.var.95.1.ci <- round(c(np.avar.95.1-1.96*np.var.95.1.sd,np.avar.95.1+1.96*np.var.95.1.sd),2)
+np.avar.95.1 <- mean(bootstrap_var$np.loss.var95.1)
+np.var.95.1.sd <- sd(bootstrap_var$np.loss.var95.1)
+np.var.95.1.ci <- round(c(np.avar.95.1-1.96*np.var.95.1.sd,np.avar.95.1+1.96*np.var.95.1.sd),2)
+# AVaR & Confidence intervals 1 year
+np.avar.95.1 <- mean(bootstrap_var$np.loss.var95.1)
+np.var.95.1.sd <- sd(bootstrap_var$np.loss.var95.1)
+np.var.95.1.ci <- round(c(np.avar.95.1-1.96*np.var.95.1.sd,np.avar.95.1+1.96*np.var.95.1.sd),2)
+np.avar.99.1 <- mean(bootstrap_var$np.loss.var99.1)
+np.var.99.1.sd <- sd(bootstrap_var$np.loss.var99.1)
+np.var.99.1.ci <- round(c(np.avar.99.1-2.57*np.var.99.1.sd,np.avar.99.1+2.57*np.var.99.1.sd),2)
+# AVaR & Confidence intervals 1 year
+np.avar.95.1 <- mean(bootstrap_var$np.loss.var95.1)
+np.var.95.1.sd <- sd(bootstrap_var$np.loss.var95.1)
+np.var.95.1.ci <- round(c(np.avar.95.1-1.96*np.var.95.1.sd,np.avar.95.1+1.96*np.var.95.1.sd),2)
+np.avar.99.1 <- mean(bootstrap_var$np.loss.var99.1)
+np.var.99.1.sd <- sd(bootstrap_var$np.loss.var99.1)
+np.var.99.1.ci <- round(c(np.avar.99.1-2.57*np.var.99.1.sd,np.avar.99.1+2.57*np.var.99.1.sd),2)
+# AVaR & Confidence intervals 5 year
+np.avar.95.5 <- mean(bootstrap_var$np.loss.var95.5)
+np.var.95.5.sd <- sd(bootstrap_var$np.loss.var95.5)
+np.var.95.5.ci <- round(c(np.avar.95.5-1.96*np.var.95.5.sd,np.avar.95.5+1.96*np.var.95.5.sd),2)
+np.avar.99.5 <- mean(bootstrap_var$np.loss.var99.5)
+np.var.99.5.sd <- sd(bootstrap_var$np.loss.var99.5)
+np.var.99.5.ci <- round(c(np.avar.99.5-2.57*np.var.99.5.sd,np.avar.99.5+2.57*np.var.99.5.sd),2)
+np.avar.95.1 <- round(mean(bootstrap_var$np.loss.var95.1),2)
+np.var.95.1.sd <- round(sd(bootstrap_var$np.loss.var95.1),2)
+np.var.95.1.ci <- round(c(np.avar.95.1-1.96*np.var.95.1.sd,np.avar.95.1+1.96*np.var.95.1.sd),2)
+# AVaR & Confidence intervals 1 year
+np.avar.95.1 <- round(mean(bootstrap_var$np.loss.var95.1),2)
+np.var.95.1.sd <- round(sd(bootstrap_var$np.loss.var95.1),2)
+np.var.95.1.ci <- round(c(np.avar.95.1-1.96*np.var.95.1.sd,np.avar.95.1+1.96*np.var.95.1.sd),2)
+np.avar.99.1 <- round(mean(bootstrap_var$np.loss.var99.1),2)
+np.var.99.1.sd <- round(sd(bootstrap_var$np.loss.var99.1),2)
+np.var.99.1.ci <- round(c(np.avar.99.1-2.57*np.var.99.1.sd,np.avar.99.1+2.57*np.var.99.1.sd),2)
+# AVaR & Confidence intervals 5 year
+np.avar.95.5 <- round(mean(bootstrap_var$np.loss.var95.5),2)
+np.var.95.5.sd <- round(sd(bootstrap_var$np.loss.var95.5),2)
+np.var.95.5.ci <- round(c(np.avar.95.5-1.96*np.var.95.5.sd,np.avar.95.5+1.96*np.var.95.5.sd),2)
+np.avar.99.5 <- round(mean(bootstrap_var$np.loss.var99.5),2)
+np.var.99.5.sd <- round(sd(bootstrap_var$np.loss.var99.5),2)
+np.var.99.5.ci <- round(c(np.avar.99.5-2.57*np.var.99.5.sd,np.avar.99.5+2.57*np.var.99.5.sd),2)
+Var_Metrics[1,2]<-np.avar.95.1
+Var_Metrics[2,2]<-np.var.95.1.sd
+Var_Metrics[3,2]<-np.var.95.1.sd
+View(Var_Metrics)
+Var_Metrics[3,2]<-np.var.95.1.ci
+Var_Metrics[1,2]<-np.avar.95.1
+Var_Metrics[2,2]<-np.var.95.1.sd
+Var_Metrics[3,2]<-paste(np.var.95.1.ci)
+Var_Metrics[3,2]<-paste(np.var.95.1.ci,sep="")
+paste(np.var.95.1.ci,sep="")
+Var_Metrics[3,2]<-paste(as.character(np.var.95.1.ci),sep="")
+Var_Metrics[3,2]<-paste(np.var.95.1.ci[1],np.var.95.1.ci[2],sep="")
+View(Var_Metrics)
+Var_Metrics[3,2]<-paste("[",paste(np.var.95.1.ci[1],np.var.95.1.ci[2],sep=","),"]",sep="")
+View(Var_Metrics)
+Var_Metrics[3,2]<-paste("[",paste(np.var.95.1.ci[1],np.var.95.1.ci[2],sep=", "),"]",sep="")
+View(Var_Metrics)
+Var_Metrics[1,2]<-np.avar.95.1
+Var_Metrics[2,2]<-np.var.95.1.sd
+Var_Metrics[3,2]<-paste("[",paste(np.var.95.1.ci[1],np.var.95.1.ci[2],sep=", "),"]",sep="")
+Var_Metrics[4,2]<-np.avar.99.1
+Var_Metrics[5,2]<-np.var.99.1.sd
+Var_Metrics[6,2]<-paste("[",paste(np.var.99.1.ci[1],np.var.99.1.ci[2],sep=", "),"]",sep="")
+View(Var_Metrics)
+Var_Metrics[1,2]<-np.avar.95.1
+Var_Metrics[2,2]<-np.var.95.1.sd
+Var_Metrics[3,2]<-paste("[",paste(np.var.95.1.ci[1],np.var.95.1.ci[2],sep=", "),"]",sep="")
+Var_Metrics[4,2]<-np.avar.99.1
+Var_Metrics[5,2]<-np.var.99.1.sd
+Var_Metrics[6,2]<-paste("[",paste(np.var.99.1.ci[1],np.var.99.1.ci[2],sep=", "),"]",sep="")
+Var_Metrics[1,3]<-np.avar.95.5
+Var_Metrics[2,3]<-np.var.95.5.sd
+Var_Metrics[3,3]<-paste("[",paste(np.var.95.5.ci[1],np.var.95.5.ci[2],sep=", "),"]",sep="")
+Var_Metrics[4,3]<-np.avar.99.5
+Var_Metrics[5,3]<-np.var.99.5.sd
+Var_Metrics[6,3]<-paste("[",paste(np.var.99.5.ci[1],np.var.99.5.ci[2],sep=", "),"]",sep="")
+View(Var_Metrics)
+Var_Metrics<-data.frame(Metrics=c("Mean (95%)","CI (95%)","Standard Deviation (95%)","Mean (99%)","CI (99%)","Standard Deviation (99%)"),Year_1="",Year_5="",stringsAsFactors = F)
+# AVaR & Confidence intervals 1 year
+np.avar.95.1 <- round(mean(bootstrap_var$np.loss.var95.1),2)
+np.var.95.1.sd <- round(sd(bootstrap_var$np.loss.var95.1),2)
+np.var.95.1.ci <- round(c(np.avar.95.1-1.96*np.var.95.1.sd,np.avar.95.1+1.96*np.var.95.1.sd),2)
+np.avar.99.1 <- round(mean(bootstrap_var$np.loss.var99.1),2)
+np.var.99.1.sd <- round(sd(bootstrap_var$np.loss.var99.1),2)
+np.var.99.1.ci <- round(c(np.avar.99.1-2.57*np.var.99.1.sd,np.avar.99.1+2.57*np.var.99.1.sd),2)
+# AVaR & Confidence intervals 5 year
+np.avar.95.5 <- round(mean(bootstrap_var$np.loss.var95.5),2)
+np.var.95.5.sd <- round(sd(bootstrap_var$np.loss.var95.5),2)
+np.var.95.5.ci <- round(c(np.avar.95.5-1.96*np.var.95.5.sd,np.avar.95.5+1.96*np.var.95.5.sd),2)
+np.avar.99.5 <- round(mean(bootstrap_var$np.loss.var99.5),2)
+np.var.99.5.sd <- round(sd(bootstrap_var$np.loss.var99.5),2)
+np.var.99.5.ci <- round(c(np.avar.99.5-2.57*np.var.99.5.sd,np.avar.99.5+2.57*np.var.99.5.sd),2)
+Var_Metrics[1,2]<-np.avar.95.1
+Var_Metrics[2,2]<-paste("[",paste(np.var.95.1.ci[1],np.var.95.1.ci[2],sep=", "),"]",sep="")
+Var_Metrics[3,2]<-np.var.95.1.sd
+Var_Metrics[4,2]<-np.avar.99.1
+Var_Metrics[5,2]<-paste("[",paste(np.var.99.1.ci[1],np.var.99.1.ci[2],sep=", "),"]",sep="")
+Var_Metrics[6,2]<-np.var.99.1.sd
+Var_Metrics[1,3]<-np.avar.95.5
+Var_Metrics[2,3]<-paste("[",paste(np.var.95.5.ci[1],np.var.95.5.ci[2],sep=", "),"]",sep="")
+Var_Metrics[3,3]<-np.var.95.5.sd
+Var_Metrics[4,3]<-np.avar.99.5
+Var_Metrics[5,3]<-paste("[",paste(np.var.99.5.ci[1],np.var.99.5.ci[2],sep=", "),"]",sep="")
+Var_Metrics[6,3]<-np.var.99.5.sd
+View(Var_Metrics)
+write.csv(Var_Metrics,"../Figures/VAR_Metrics.csv")
+source('~/Google Drive/Current Quarter/MS&E 245B/Applied PSet/Download Stock Data.R')
+source('~/Google Drive/Current Quarter/MS&E 245B/Applied PSet/David.R')
+tail(SP500)
+# Remove all variables from Workspace
+rm(list=ls())
+set.seed(1234)
+# install package manager if not installed
+if (!require("pacman")){
+install.packages("pacman")
+}
+# Load package Manager
+require(pacman)
+# Install/load required packages
+p_load(quantmod)
+###################################
+##  Download All Available Dates ##
+###################################
+VOO = getSymbols(
+"^GSPC",
+auto.assign = FALSE)
+VOO_df = data.frame(VOO) ## Optional, for those more comfortable manipulating data.frame objects.  E.g. this allows easy extraction of the adjusted closing prices via
+head(VOO_df)
+VOO_df$GSPC.Adjusted
+##########################
+##  Specify Date Range  ##
+##########################
+SP500_1 = getSymbols(
+"^GSPC",
+from = "2011-01-01",
+to = "2012-01-01",
+auto.assign = FALSE)
+SP500_2 = getSymbols(
+"^GSPC",
+from = "2012-01-01",
+to = "2013-01-01",
+auto.assign = FALSE)
+SP500_3 = getSymbols(
+"^GSPC",
+from = "2013-01-01",
+to = "2014-01-01",
+auto.assign = FALSE)
+SP500_4 = getSymbols(
+"^GSPC",
+from = "2014-01-01",
+to = "2015-01-01",
+auto.assign = FALSE)
+SP500_5 = getSymbols(
+"^GSPC",
+from = "2015-01-01",
+to = "2016-01-01",
+auto.assign = FALSE)
+View(SP500_1)
+dim(SP500_1)
+dim(SP500_1)
+dim(SP500_2)
+dim(SP500_3)
+dim(SP500_4)
+dim(SP500_5)
+SP500_1$GSPC.Adjusted
+row.names(SP500_1)
+rownames(SP500_1)
+nrow(SP500_1)
+View(SP500_1)
+View(SP500_2)
+View(SP500_3)
+View(SP500_4)
+View(SP500_5)
+source('~/Google Drive/Current Quarter/MS&E 245B/Applied PSet/David.R')
+min(SP500_1$GSPC.Adjusted)
+min(SP500_1$GSPC.Adjusted)
+min(SP500_1$GSPC.Adjusted)
+min(SP500_2$GSPC.Adjusted)
+min(SP500_3$GSPC.Adjusted)
+min(SP500_4$GSPC.Adjusted)
+min(SP500_5$GSPC.Adjusted)

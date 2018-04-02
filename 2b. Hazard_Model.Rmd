@@ -1,0 +1,238 @@
+---
+title: "hazard-model-denis"
+author: "Denis Bykov"
+date: "March 6, 2018"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo=FALSE}
+library(survival)
+library(survminer)
+
+# Import RDS File
+temporal = readRDS("Hazard_Temporal_Data.rds")
+temporal = subset(temporal, select = -c(Year, Date, Month_event, X, ApprovalDate, BorrZip, ProjectCounty,ProjectState))
+```
+
+## Univariate Hazard Model
+
+Understanding results of a single covariate on survival. Chargeoff is modeled as 1, so positive coefficients means more correlated with having a chargeoff.
+
+```{r univariate hazard model, echo=FALSE}
+# Univariate Hazard Model
+res_one.cox <- coxph(Surv(TimeElapsed, result) ~ zill_ZHVI, data = temporal)
+# res.cox
+summary(res_one.cox)
+```
+
+## Univariate Hazard Applied to Multiple Covariates
+Alternative to running multivariate model, studies impact of set of variables but does each one individually. Used for looking at impact of covariates that produce NAs for some reason in multivariate model.
+
+```{r multi-univariate, echo=FALSE}
+covariates <- c("ed_st_LOCAL_REVENUE", "ed_cty_TLOCREV", "zill_SizeRank_med", "zill_SizeRank_inc", "zill_MedianValue", "sp_Adj_Close","ag_Total")
+univ_formulas <- sapply(covariates,
+                        function(x) as.formula(paste('Surv(TimeElapsed, result)~', x)))
+univ_models <- lapply( univ_formulas, function(x){coxph(x, data = temporal)})
+# Extract data 
+univ_results <- lapply(univ_models,
+                       function(x){ 
+                         x <- summary(x)
+                         p.value<-signif(x$wald["pvalue"], digits=2)
+                         wald.test<-signif(x$wald["test"], digits=2)
+                         beta<-signif(x$coef[1], digits=2);#coeficient beta
+                         HR <-signif(x$coef[2], digits=2);#exp(beta)
+                         HR.confint.lower <- signif(x$conf.int[,"lower .95"], 2)
+                         HR.confint.upper <- signif(x$conf.int[,"upper .95"],2)
+                         HR <- paste0(HR, " (", 
+                                      HR.confint.lower, "-", HR.confint.upper, ")")
+                         res<-c(beta, HR, wald.test, p.value)
+                         names(res)<-c("beta", "HR (95% CI for HR)", "wald.test", 
+                                       "p.value")
+                         return(res)
+                         #return(exp(cbind(coef(x),confint(x))))
+                       })
+res <- t(as.data.frame(univ_results, check.names = FALSE))
+knitr::kable(res)
+# as.data.frame(res)
+```
+
+## Multivariate Hazard Model
+
+Cox model across all covariates except those that produced NAs results in previous runs. Looks at effect of each variable in aggregate versus individually as done above.
+
+```{r multivariate, echo=FALSE}
+# omit = paste(na_var, "Year", "Date", "Month_event", "X", "ApprovalDate", "BorrZip", "ProjectCounty", "ProjectState", sep = " - ")
+# na_var = paste("ed_st_LOCAL_REVENUE", "ed_cty_TLOCREV", "zill_SizeRank_med", "zill_SizeRank_inc", "zill_MedianValue", "unemp_rate_US","BCI","CCI","sp_Adj_Close","sp_Returns","sp_Volume","sp_Close","sp_Low","sp_High","sp_Open","ag_Total","ag_Private_dollar","ag_Public_dollar","ag_Private_nom","ag_Public_nom", sep = " - ")
+res.cox <- coxph(Surv(TimeElapsed, result) ~ . , data =  temporal)
+summary(res.cox)
+```
+
+```{r, echo=FALSE}
+# Plot the baseline survival function
+ggsurvplot(survfit(res.cox), palette= '#2E9FDF',
+           ggtheme = theme_minimal(), data = temporal)
+```
+
+```{r, echo=FALSE}
+# Create the new data  
+res2.cox <- coxph(Surv(TimeElapsed, result) ~ unemp_rate_cty + CCI + zill_ZHVI , data =  temporal)
+
+# unemp_rate_cty, zill_zhvi, cci
+unemp_vals = unique(temporal$unemp_rate_cty)[-1]
+len = length(unemp_vals)
+df <- with(temporal, data.frame(unemp_rate_cty = c(0.5,40.5), CCI = rep(mean(CCI, na.rm = TRUE), 2), zill_ZHVI = rep(mean(zill_ZHVI, na.rm = TRUE), 2)))
+
+# Survival curves
+fit <- survfit(res2.cox, newdata = df)
+ggsurvplot(fit, conf.int = TRUE, legend.labs=c("Unemp=0.5", "Unemp=40.5"), ggtheme = theme_minimal(), data = temporal)
+
+```
+
+## Checking the Significance of Income
+Income data contains many missing values, wanted to check using multi-univariate in case valuable to include that data.
+
+```{r, echo=FALSE}
+# Load Income data
+temporal2 = readRDS("Hazard_Temporal_Income.rds")
+temporal2 = subset(temporal2, select = colnames(temporal2)[c(45:66)])
+```
+
+
+```{r, echo=FALSE}
+# Working with Temporal2
+income_vars = c("income_n1_2","income_prep_2","income_n2_2","income_a00100_2","income_a00200_2","income_a00300_2","income_a00600_2","income_a00900_2","income_a18300_2","income_a19700_2","income_n1_3","income_prep_3","income_n2_3","income_a00100_3","income_a00200_3","income_a00300_3","income_a00600_3","income_a00900_3","income_a18300_3","income_a19700_3")
+
+univ_formulas <- sapply(income_vars,
+                        function(x) as.formula(paste('Surv(TimeElapsed, result)~', x)))
+univ_models <- lapply( univ_formulas, function(x){coxph(x, data = temporal2)})
+# Extract data 
+univ_results <- lapply(univ_models,
+                       function(x){ 
+                         x <- summary(x)
+                         p.value<-signif(x$wald["pvalue"], digits=2)
+                         wald.test<-signif(x$wald["test"], digits=2)
+                         beta<-signif(x$coef[1], digits=2);#coeficient beta
+                         HR <-signif(x$coef[2], digits=2);#exp(beta)
+                         HR.confint.lower <- signif(x$conf.int[,"lower .95"], 2)
+                         HR.confint.upper <- signif(x$conf.int[,"upper .95"],2)
+                         HR <- paste0(HR, " (", 
+                                      HR.confint.lower, "-", HR.confint.upper, ")")
+                         res<-c(beta, HR, wald.test, p.value)
+                         names(res)<-c("beta", "HR (95% CI for HR)", "wald.test", 
+                                       "p.value")
+                         return(res)
+                         #return(exp(cbind(coef(x),confint(x))))
+                       })
+res_income <- t(as.data.frame(univ_results, check.names = FALSE))
+knitr::kable(res_income)
+
+```
+
+## Multivariate Analysis of Income Data
+
+```{r, echo=FALSE}
+res_income.cox <- coxph(Surv(TimeElapsed, result) ~ . , data =  temporal2)
+summary(res_income.cox)
+
+```
+
+## Graphs with Income Data
+Taking the most statistically significant groups and creating plots.
+```{r, echo=FALSE}
+# Create the new data
+# income_a00900_3 income_a00300_2 income_a00300_3 income_prep_3 income_n1_2
+res_income2.cox <- coxph(Surv(TimeElapsed, result) ~ income_a00900_3 + income_a00300_2 + income_a00300_3 + income_prep_3 + income_n1_2, data =  temporal2)
+
+df_income <- with(temporal2, 
+  data.frame(
+    income_a00900_3 = c(-10850330,30398548),
+    income_a00300_2 = rep(mean(income_a00300_2, na.rm = TRUE), 2),
+    income_a00300_3 = rep(mean(income_a00300_3, na.rm = TRUE), 2),
+    income_prep_3 = rep(mean(income_prep_3, na.rm = TRUE), 2),
+    income_n1_2 = rep(mean(income_n1_2, na.rm = TRUE), 2) 
+  )
+)
+
+# Survival curves
+fit_income <- survfit(res_income2.cox, newdata = df_income)
+ggsurvplot(fit_income, conf.int = TRUE, legend.labs=c("a00900=-10850330", "a00900=30398548"), ggtheme = theme_minimal(), data = temporal2)
+
+
+```
+
+```{r, echo=FALSE}
+res_income2.cox <- coxph(Surv(TimeElapsed, result) ~ income_a00900_3 + income_a00300_2 + income_a00300_3 + income_prep_3 + income_n1_2, data =  temporal2)
+
+df_income <- with(temporal2, 
+  data.frame(
+    income_a00900_3 = rep(mean(income_a00900_3, na.rm = TRUE), 2),
+    income_a00300_2 = c(min(income_a00300_2, na.rm = TRUE), max(income_a00300_2, na.rm = TRUE)),
+    income_a00300_3 = rep(mean(income_a00300_3, na.rm = TRUE), 2),
+    income_prep_3 = rep(mean(income_prep_3, na.rm = TRUE), 2),
+    income_n1_2 = rep(mean(income_n1_2, na.rm = TRUE), 2) 
+  )
+)
+
+# Survival curves
+fit_income <- survfit(res_income2.cox, newdata = df_income)
+ggsurvplot(fit_income, conf.int = FALSE, legend.labs=c("a00300_2=Min", "a00300_2=Max"), ggtheme = theme_minimal(), data = temporal2)
+```
+
+
+```{r, echo=FALSE}
+res_income2.cox <- coxph(Surv(TimeElapsed, result) ~ income_a00900_3 + income_a00300_2 + income_a00300_3 + income_prep_3 + income_n1_2 + income_a00600_2 + income_a00100_2 + income_prep_2, data =  temporal2)
+
+df_income <- with(temporal2, 
+  data.frame(
+    income_a00900_3 = rep(mean(income_a00900_3, na.rm = TRUE), 2),
+    income_a00300_2 = rep(mean(income_a00300_2, na.rm = TRUE), 2),
+    income_a00300_3 = rep(mean(income_a00300_3, na.rm = TRUE), 2),
+    income_prep_3 = rep(mean(income_prep_3, na.rm = TRUE), 2),
+    income_n1_2 = rep(mean(income_n1_2, na.rm = TRUE), 2),
+    income_a00600_2 = rep(mean(income_a00600_2, na.rm = TRUE), 2),
+    income_a00100_2 = c(min(income_a00100_2, na.rm = TRUE), max(income_a00100_2, na.rm = TRUE)),
+    # income_a00100_2 = rep(mean(income_a00100_2, na.rm = TRUE), 2),
+    income_prep_2 = rep(mean(income_prep_2, na.rm = TRUE), 2)
+  )
+)
+
+# Survival curves
+fit_income <- survfit(res_income2.cox, newdata = df_income)
+ggsurvplot(fit_income, conf.int = FALSE, legend.labs=c("a00100_2=Min", "a00100_2=Max"), ggtheme = theme_minimal(), data = temporal2)
+```
+
+```{r, echo=FALSE}
+res_income2.cox <- coxph(Surv(TimeElapsed, result) ~ income_a00900_3 + income_a00300_2 + income_a00300_3 + income_prep_3 + income_n1_2 + income_a00600_2 + income_a00100_2 + income_prep_2, data =  temporal2)
+
+a = sort(unique(temporal2$income_a00100_2)[-1])
+
+df_income <- with(temporal2, 
+  data.frame(
+    income_a00900_3 = rep(mean(income_a00900_3, na.rm = TRUE), 3),
+    income_a00300_2 = rep(mean(income_a00300_2, na.rm = TRUE), 3),
+    income_a00300_3 = rep(mean(income_a00300_3, na.rm = TRUE), 3),
+    income_prep_3 = rep(mean(income_prep_3, na.rm = TRUE), 3),
+    income_n1_2 = rep(mean(income_n1_2, na.rm = TRUE), 3),
+    income_a00600_2 = rep(mean(income_a00600_2, na.rm = TRUE), 3),
+    # income_a00100_2 = c(a[1], a[150], a[300]),
+    income_a00100_2 = c( quantile(a, c(0, .25, .5))[[1]], quantile(a, c(0, .25, .5))[[2]], quantile(a, c(0, .25, .5))[[3]]  ),
+    income_prep_2 = rep(mean(income_prep_2, na.rm = TRUE), 3)
+  )
+)
+
+# Survival curves
+fit_income <- survfit(res_income2.cox, newdata = df_income)
+ggsurvplot(fit_income, conf.int = FALSE, legend.labs=c("a00100_2=Min", "a00100_2=25%", "a00100_2=Median"), ggtheme = theme_minimal(), data = temporal2)
+```
+
+
+https://www.kaggle.com/irs/individual-income-tax-statistics/data 
+
+## To Do
+Cleanup NAs, make sure same formatting. Normalize. Take log of big numbers?
